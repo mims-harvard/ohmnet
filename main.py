@@ -7,13 +7,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Run OhmNet')
 
     parser.add_argument('--input', nargs='?', default='network.list',
-                        help='Input path to a file with network locations')
+                        help='Path to a file containing locations of network layers')
 
     parser.add_argument('--outdir', nargs='?', default='emb',
-                        help='Embeddings directory')
+                        help='Path to a directory where results are saved')
 
     parser.add_argument('--hierarchy', nargs='?', default='hierarchy',
-                        help='Input path to a file with network directory')
+                        help='Path to a file containing multi-layer network hierarchy')
 
     parser.add_argument('--dimension', type=int, default=128,
                         help='Number of dimensions. Default is 128.')
@@ -21,8 +21,8 @@ def parse_args():
     parser.add_argument('--walk-length', type=int, default=10,
                         help='Length of walk per source. Default is 10.')
 
-    parser.add_argument('--num-walks', type=int, default=10,
-                        help='Number of walks per source. Default is 10.')
+    parser.add_argument('--num-walks', type=int, default=5,
+                        help='Number of walks per source. Default is 5.')
 
     parser.add_argument('--window-size', type=int, default=10,
                         help='Context size for optimization. Default is 10.')
