@@ -77,7 +77,13 @@ Please send any questions you might have about the code and/or the
 algorithm to <marinka@cs.stanford.edu>.
 
 Note: This is a full Python implementation of *OhmNet* 
-algorithm. A C++ implementation will be released as part of SNAP software. 
+algorithm. A C++ implementation will be released as part of SNAP software.
+
+## Dependencies
+
+OhmNet is tested to work under Python 2.7.
+
+The required dependencies for OhmNet are [NumPy](http://www.numpy.org) >= 1.12, and [NetworkX](https://networkx.github.io/) >= 1.11.
 
 ## License
 
