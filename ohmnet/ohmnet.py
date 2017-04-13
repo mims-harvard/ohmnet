@@ -8,8 +8,7 @@ import networkx as nx
 
 import utility
 
-sys.path.insert(1, 'gensim')
-from gensim.models import Word2Vec
+from .gensim.models import Word2Vec
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 

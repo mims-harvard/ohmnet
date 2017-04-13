@@ -6,13 +6,13 @@ from ohmnet import ohmnet
 def parse_args():
     parser = argparse.ArgumentParser(description='Run OhmNet')
 
-    parser.add_argument('--input', nargs='?', default='network.list',
+    parser.add_argument('--input', nargs='?', default='data/brain.list',
                         help='Path to a file containing locations of network layers')
 
     parser.add_argument('--outdir', nargs='?', default='emb',
                         help='Path to a directory where results are saved')
 
-    parser.add_argument('--hierarchy', nargs='?', default='hierarchy',
+    parser.add_argument('--hierarchy', nargs='?', default='data/brain.hierarchy',
                         help='Path to a file containing multi-layer network hierarchy')
 
     parser.add_argument('--dimension', type=int, default=128,
