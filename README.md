@@ -58,15 +58,15 @@ the *d*-dimensional representation learned by *OhmNet*.
 ## Citing
 
 If you find *OhmNet* useful for your research, please consider citing 
-the following paper presented at ISMB/ECCB 2017:
+the following [paper presented at ISMB/ECCB 2017](https://academic.oup.com/bioinformatics/article/33/14/i190/3953967/Predicting-multicellular-function-through-multi):
 
     @article{Zitnik2017,
       title     = {Predicting multicellular function through multi-layer tissue networks},
       author    = {Zitnik, Marinka and Leskovec, Jure},
       journal   = {Bioinformatics},
-      volume    = {},
-      number    = {},
-      pages     = {},
+      volume    = {33},
+      number    = {14},
+      pages     = {190-198},
       year      = {2017},
       publisher = {Oxford Journals}
     }
