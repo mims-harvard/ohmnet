@@ -1,53 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# This OhmNet code is adapted from:
 # Copyright (C) 2010 Radim Rehurek <radimrehurek@seznam.cz>
 # Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html
-
-"""
-This module contains basic interfaces used throughout the whole gensim package.
-
-The interfaces are realized as abstract base classes (ie., some optional functionality
-is provided in the interface itself, so that the interfaces can be subclassed).
-"""
 
 from __future__ import with_statement
 
 import logging
-import itertools
 
 from . import utils, matutils
 from six.moves import xrange
 
 
-logger = logging.getLogger('gensim.interfaces')
+logger = logging.getLogger('gensimmod.interfaces')
 
 
 class CorpusABC(utils.SaveLoad):
-    """
-    Interface (abstract base class) for corpora. A *corpus* is simply an iterable,
-    where each iteration step yields one document:
-
-    >>> for doc in corpus:
-    >>>     # do something with the doc...
-
-    A document is a sequence of `(fieldId, fieldValue)` 2-tuples:
-
-    >>> for attr_id, attr_value in doc:
-    >>>     # do something with the attribute
-
-    Note that although a default :func:`len` method is provided, it is very inefficient
-    (performs a linear scan through the corpus to determine its length). Wherever
-    the corpus size is needed and known in advance (or at least doesn't change so
-    that it can be cached), the :func:`len` method should be overridden.
-
-    See the :mod:`gensim.corpora.svmlightcorpus` module for an example of a corpus.
-
-    Saving the corpus with the `save` method (inherited from `utils.SaveLoad`) will
-    only store the *in-memory* (binary, pickled) object representation=the stream
-    state, and **not** the documents themselves. See the `save_corpus` static method
-    for serializing the actual stream content.
-    """
     def __iter__(self):
         """
         Iterate over the corpus, yielding one document at a time.
@@ -130,21 +99,6 @@ class TransformedCorpus(CorpusABC):
 
 
 class TransformationABC(utils.SaveLoad):
-    """
-    Interface for transformations. A 'transformation' is any object which accepts
-    a sparse document via the dictionary notation `[]` and returns another sparse
-    document in its stead::
-
-    >>> transformed_doc = transformation[doc]
-
-    or also::
-
-    >>> transformed_corpus = transformation[corpus]
-
-    See the :mod:`gensim.models.tfidfmodel` module for an example of a transformation.
-
-    """
-
     def __getitem__(self, vec):
         """
         Transform vector from one vector space into another
@@ -166,21 +120,6 @@ class TransformationABC(utils.SaveLoad):
 
 
 class SimilarityABC(utils.SaveLoad):
-    """
-    Abstract interface for similarity searches over a corpus.
-
-    In all instances, there is a corpus against which we want to perform the
-    similarity search.
-
-    For each similarity search, the input is a document and the output are its
-    similarities to individual corpus documents.
-
-    Similarity queries are realized by calling ``self[query_document]``.
-
-    There is also a convenience wrapper, where iterating over `self` yields
-    similarities of each document in the corpus against the whole corpus (ie.,
-    the query is each corpus document in turn).
-    """
     def __init__(self, corpus):
         raise NotImplementedError("cannot instantiate Abstract Base Class")
 
@@ -269,4 +208,3 @@ class SimilarityABC(utils.SaveLoad):
 
         # restore old normalization value
         self.normalize = norm
-#endclass SimilarityABC

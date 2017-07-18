@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# This OhmNet code is adapted from:
 # Copyright (C) 2011 Radim Rehurek <radimrehurek@seznam.cz>
 # Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html
 
-"""
-This module contains math helper functions.
-"""
-
 from __future__ import with_statement
-
 
 import logging
 import math
@@ -155,7 +151,7 @@ def ismatrix(m):
 
 
 def any2sparse(vec, eps=1e-9):
-    """Convert a numpy/scipy vector into gensim document format (=list of 2-tuples)."""
+    """Convert a numpy/scipy vector into document format (=list of 2-tuples)."""
     if isinstance(vec, numpy.ndarray):
         return dense2vec(vec, eps)
     if scipy.sparse.issparse(vec):
@@ -164,7 +160,7 @@ def any2sparse(vec, eps=1e-9):
 
 
 def scipy2sparse(vec, eps=1e-9):
-    """Convert a scipy.sparse vector into gensim document format (=list of 2-tuples)."""
+    """Convert a scipy.sparse vector into document format (=list of 2-tuples)."""
     vec = vec.tocsr()
     assert vec.shape[0] == 1
     return [(int(pos), float(val)) for pos, val in zip(vec.indices, vec.data) if numpy.abs(val) > eps]
@@ -172,7 +168,7 @@ def scipy2sparse(vec, eps=1e-9):
 
 class Scipy2Corpus(object):
     """
-    Convert a sequence of dense/sparse vectors into a streamed gensim corpus object.
+    Convert a sequence of dense/sparse vectors into a streamed corpus object.
 
     This is the mirror function to `corpus2csc`.
 
@@ -268,7 +264,7 @@ def corpus2dense(corpus, num_terms, num_docs=None, dtype=numpy.float32):
 
 class Dense2Corpus(object):
     """
-    Treat dense numpy array as a sparse, streamed gensim corpus.
+    Treat dense numpy array as a sparse, streamed corpus.
 
     No data copy is made (changes to the underlying matrix imply changes in the
     corpus).
@@ -293,7 +289,7 @@ class Dense2Corpus(object):
 
 class Sparse2Corpus(object):
     """
-    Convert a matrix in scipy.sparse format into a streaming gensim corpus.
+    Convert a matrix in scipy.sparse format into a streaming corpus.
 
     This is the mirror function to `corpus2csc`.
 
@@ -335,8 +331,7 @@ def unitvec(vec, norm='l2'):
     Scale a vector to unit length. The only exception is the zero vector, which
     is returned back unchanged.
 
-    Output will be in the same format as input (i.e., gensim vector=>gensim vector,
-    or numpy array=>numpy array, scipy.sparse=>scipy.sparse).
+    Output will be in the same format as input.
     """
     if norm not in ('l1', 'l2'):
         raise ValueError("'%s' is not a supported norm. Currently supported norms are 'l1' and 'l2'." % norm)
@@ -367,7 +362,7 @@ def unitvec(vec, norm='l2'):
     except:
         return vec
 
-    if isinstance(first, (tuple, list)) and len(first) == 2: # gensim sparse format
+    if isinstance(first, (tuple, list)) and len(first) == 2:
         if norm == 'l1':
             length = float(sum(abs(val) for _, val in vec))
         if norm == 'l2':

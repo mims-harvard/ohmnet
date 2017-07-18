@@ -1,75 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# This OhmNet code is adapted from:
 # Copyright (C) 2013 Radim Rehurek <me@radimrehurek.com>
 # Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html
 
-
-"""
-Deep learning via word2vec's "skip-gram and CBOW models", using either
-hierarchical softmax or negative sampling [1]_ [2]_.
-
-The training algorithms were originally ported from the C package https://code.google.com/p/word2vec/
-and extended with additional functionality.
-
-For a blog tutorial on gensim word2vec, with an interactive web app trained on GoogleNews, visit http://radimrehurek.com/2014/02/word2vec-tutorial/
-
-**Make sure you have a C compiler before installing gensim, to use optimized (compiled) word2vec training**
-(70x speedup compared to plain NumPy implementation [3]_).
-
-Initialize a model with e.g.::
-
->>> model = Word2Vec(sentences, size=100, window=5, min_count=5, workers=4)
-
-Persist a model to disk with::
-
->>> model.save(fname)
->>> model = Word2Vec.load(fname)  # you can continue training with the loaded model!
-
-The model can also be instantiated from an existing file on disk in the word2vec C format::
-
-  >>> model = Word2Vec.load_word2vec_format('/tmp/vectors.txt', binary=False)  # C text format
-  >>> model = Word2Vec.load_word2vec_format('/tmp/vectors.bin', binary=True)  # C binary format
-
-You can perform various syntactic/semantic NLP word tasks with the model. Some of them
-are already built-in::
-
-  >>> model.most_similar(positive=['woman', 'king'], negative=['man'])
-  [('queen', 0.50882536), ...]
-
-  >>> model.doesnt_match("breakfast cereal dinner lunch".split())
-  'cereal'
-
-  >>> model.similarity('woman', 'man')
-  0.73723527
-
-  >>> model['computer']  # raw numpy vector of a word
-  array([-0.00449447, -0.00310097,  0.02421786, ...], dtype=float32)
-
-and so on.
-
-If you're finished training a model (=no more updates, only querying), you can do
-
-  >>> model.init_sims(replace=True)
-
-to trim unneeded model memory = use (much) less RAM.
-
-Note that there is a :mod:`gensim.models.phrases` module which lets you automatically
-detect phrases longer than one word. Using phrases, you can learn a word2vec model
-where "words" are actually multiword expressions, such as `new_york_times` or `financial_crisis`:
-
->>> bigram_transformer = gensim.models.Phrases(sentences)
->>> model = Word2Vec(bigram_transformer[sentences], size=100, ...)
-
-.. [1] Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean. Efficient Estimation of Word Representations in Vector Space. In Proceedings of Workshop at ICLR, 2013.
-.. [2] Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg Corrado, and Jeffrey Dean. Distributed Representations of Words and Phrases and their Compositionality.
-       In Proceedings of NIPS, 2013.
-.. [3] Optimizing word2vec in gensim, http://radimrehurek.com/2013/09/word2vec-in-python-part-two-optimizing/
-"""
-from __future__ import division  # py3 "true division"
+from __future__ import division
 
 import logging
-import sys
 import os
 import heapq
 from timeit import default_timer
@@ -78,19 +16,18 @@ from collections import defaultdict
 import threading
 import itertools
 
-from ..utils import keep_vocab_item
-
 try:
     from queue import Queue, Empty
 except ImportError:
     from Queue import Queue, Empty
 
 from numpy import exp, log, dot, zeros, outer, random, dtype, float32 as REAL,\
-    double, uint32, seterr, array, uint8, vstack, fromstring, sqrt, newaxis,\
+    double, uint32, array, uint8, fromstring, sqrt, newaxis,\
     ndarray, empty, sum as np_sum, prod, ones, ascontiguousarray, vstack
 
 from .. import utils, matutils  # utility fnc for pickling, common scipy operations etc
-from ..corpora.dictionary import Dictionary
+from ..dictionary import Dictionary
+
 from six import iteritems, itervalues, string_types
 from six.moves import xrange
 from types import GeneratorType
@@ -98,9 +35,9 @@ from types import GeneratorType
 logger = logging.getLogger(__name__)
 
 try:
-    from gensim.models.word2vec_inner import train_batch_sg, train_batch_cbow
-    from gensim.models.word2vec_inner import score_sentence_sg, score_sentence_cbow
-    from gensim.models.word2vec_inner import FAST_VERSION, MAX_WORDS_IN_BATCH
+    from word2vec_inner import train_batch_sg, train_batch_cbow
+    from word2vec_inner import score_sentence_sg, score_sentence_cbow
+    from word2vec_inner import FAST_VERSION, MAX_WORDS_IN_BATCH
     logger.debug('Fast version of {0} is being used'.format(__name__))
 except ImportError:
     # failed... fall back to plain numpy (20-80x slower training than the above)
@@ -1910,66 +1847,20 @@ class LineSentence(object):
                         i += self.max_sentence_length
 
 
-# Example: ./word2vec.py -train data.txt -output vec.txt -size 200 -window 5 -sample 1e-4 -negative 5 -hs 0 -binary 0 -cbow 1 -iter 3
-if __name__ == "__main__":
-    import argparse
-    logging.basicConfig(
-        format='%(asctime)s : %(threadName)s : %(levelname)s : %(message)s',
-        level=logging.INFO)
-    logging.info("running %s", " ".join(sys.argv))
-    logging.info("using optimization %s", FAST_VERSION)
+RULE_DISCARD = 1
+RULE_KEEP = 2
 
-    # check and process cmdline input
-    program = os.path.basename(sys.argv[0])
-    if len(sys.argv) < 2:
-        print(globals()['__doc__'] % locals())
-        sys.exit(1)
 
-    from gensim.models.word2vec import Word2Vec  # avoid referencing __main__ in pickle
+def keep_vocab_item(word, count, min_count, trim_rule=None):
+    default_res = count >= min_count
 
-    seterr(all='raise')  # don't ignore numpy errors
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-train", help="Use text data from file TRAIN to train the model", required=True)
-    parser.add_argument("-output", help="Use file OUTPUT to save the resulting word vectors")
-    parser.add_argument("-window", help="Set max skip length WINDOW between words; default is 5", type=int, default=5)
-    parser.add_argument("-size", help="Set size of word vectors; default is 100", type=int, default=100)
-    parser.add_argument("-sample", help="Set threshold for occurrence of words. Those that appear with higher frequency in the training data will be randomly down-sampled; default is 1e-3, useful range is (0, 1e-5)", type=float, default=1e-3)
-    parser.add_argument("-hs", help="Use Hierarchical Softmax; default is 0 (not used)", type=int, default=0, choices=[0, 1])
-    parser.add_argument("-negative", help="Number of negative examples; default is 5, common values are 3 - 10 (0 = not used)", type=int, default=5)
-    parser.add_argument("-threads", help="Use THREADS threads (default 12)", type=int, default=12)
-    parser.add_argument("-iter", help="Run more training iterations (default 5)", type=int, default=5)
-    parser.add_argument("-min_count", help="This will discard words that appear less than MIN_COUNT times; default is 5", type=int, default=5)
-    parser.add_argument("-cbow", help="Use the continuous bag of words model; default is 1 (use 0 for skip-gram model)", type=int, default=1, choices=[0, 1])
-    parser.add_argument("-binary", help="Save the resulting vectors in binary mode; default is 0 (off)", type=int, default=0, choices=[0, 1])
-    parser.add_argument("-accuracy", help="Use questions from file ACCURACY to evaluate the model")
-
-    args = parser.parse_args()
-
-    if args.cbow == 0:
-        skipgram = 1
+    if trim_rule is None:
+        return default_res
     else:
-        skipgram = 0
-
-    corpus = LineSentence(args.train)
-
-    model = Word2Vec(
-        corpus, size=args.size, min_count=args.min_count, workers=args.threads,
-        window=args.window, sample=args.sample, sg=skipgram, hs=args.hs,
-        negative=args.negative, cbow_mean=1, iter=args.iter)
-
-    if args.output:
-        outfile = args.output
-        model.save_word2vec_format(outfile, binary=args.binary)
-    else:
-        outfile = args.train
-        model.save(outfile + '.model')
-    if args.binary == 1:
-        model.save_word2vec_format(outfile + '.model.bin', binary=True)
-    else:
-        model.save_word2vec_format(outfile + '.model.txt', binary=False)
-
-    if args.accuracy:
-        model.accuracy(args.accuracy)
-
-    logger.info("finished running %s", program)
+        rule_res = trim_rule(word, count, min_count)
+        if rule_res == RULE_KEEP:
+            return True
+        elif rule_res == RULE_DISCARD:
+            return False
+        else:
+            return default_res

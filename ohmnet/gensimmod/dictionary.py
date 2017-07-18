@@ -1,19 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# This OhmNet code is adapted from:
 # Copyright (C) 2010 Radim Rehurek <radimrehurek@seznam.cz>
 # Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html
-
-
-"""
-This module implements the concept of Dictionary -- a mapping between words and
-their integer ids.
-
-Dictionaries can be created from a corpus and can later be pruned according to
-document frequency (removing (un)common words via the :func:`Dictionary.filter_extremes` method),
-save/loaded from disk (via :func:`Dictionary.save` and :func:`Dictionary.load` methods), merged
-with other dictionary (:func:`Dictionary.merge_with`) etc.
-"""
 
 from __future__ import with_statement
 
@@ -22,7 +12,7 @@ import sys
 import logging
 import itertools
 
-from .. import utils
+from  . import utils
 
 if sys.version_info[0] >= 3:
     unicode = str
@@ -32,7 +22,7 @@ from six.moves import xrange
 from six.moves import zip as izip
 
 
-logger = logging.getLogger('gensim.corpora.dictionary')
+logger = logging.getLogger('gensimmod.dictionary')
 
 
 class Dictionary(utils.SaveLoad, Mapping):

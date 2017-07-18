@@ -4,6 +4,7 @@
 # cython: cdivision=True
 # coding: utf-8
 #
+# This OhmNet code is adapted from:
 # Copyright (C) 2013 Radim Rehurek <me@radimrehurek.com>
 # Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html
 
