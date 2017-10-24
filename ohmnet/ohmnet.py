@@ -69,8 +69,8 @@ class OhmNet():
                 continue
             self.log.info('Updating internal hierarchy node: %s' % hnode)
             new_internal_vectors[hnode] = {}
-            children = self.hierarchy.successors(hnode)
-            parents = self.hierarchy.predecessors(hnode)
+            children = list(self.hierarchy.successors(hnode))
+            parents = list(self.hierarchy.predecessors(hnode))
             for node in all_nodes:
                 # update internal vectors (see Eq. 4 in Gopal et al.)
                 if parents:
@@ -87,8 +87,8 @@ class OhmNet():
                     else:
                         t2.append(internal_vectors[child][node])
                 if parents:
-                    parent = self.hierarchy.predecessors(hnode)[0]
-                    assert len(self.hierarchy.predecessors(hnode)) == 1, 'Problem'
+                    parent = parents[0]
+                    assert len(parents) == 1, 'Problem'
                     parent_vector = internal_vectors[parent][node]
                 else:
                     # root of the hierarchy
@@ -115,8 +115,8 @@ class OhmNet():
         node2internal_vector = {}
         for net_name, net in self.nets.items():
             for node in all_nodes:
-                parent = self.hierarchy.predecessors(net_name)[0]
-                assert len(self.hierarchy.predecessors(net_name)) == 1, 'Problems'
+                parent = list(self.hierarchy.predecessors(net_name))[0]
+                assert len(list(self.hierarchy.predecessors(net_name))) == 1, 'Problems'
                 parent_vector = internal_vectors[parent][node]
                 node_name = '%s__%s' % (net_name, node)
                 node2internal_vector[node_name] = parent_vector

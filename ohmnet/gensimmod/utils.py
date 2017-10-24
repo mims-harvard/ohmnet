@@ -21,6 +21,7 @@ except ImportError:
     import pickle as _pickle
 
 import sys
+import os
 
 import numpy
 import scipy.sparse
@@ -29,6 +30,45 @@ if sys.version_info[0] >= 3:
     unicode = str
 
 from six import iteritems
+
+try:
+    from smart_open import smart_open
+except ImportError:
+    logger.info("smart_open library not found; falling back to local-filesystem-only")
+
+    def make_closing(base, **attrs):
+        """
+        Add support for `with Base(attrs) as fout:` to the base class if it's missing.
+        The base class' `close()` method will be called on context exit, to always close the file properly.
+
+        This is needed for gzip.GzipFile, bz2.BZ2File etc in older Pythons (<=2.6), which otherwise
+        raise "AttributeError: GzipFile instance has no attribute '__exit__'".
+
+        """
+        if not hasattr(base, '__enter__'):
+            attrs['__enter__'] = lambda self: self
+        if not hasattr(base, '__exit__'):
+            attrs['__exit__'] = lambda self, type, value, traceback: self.close()
+        return type('Closing' + base.__name__, (base, object), attrs)
+
+    def smart_open(fname, mode='rb'):
+        _, ext = os.path.splitext(fname)
+        if ext == '.bz2':
+            from bz2 import BZ2File
+            return make_closing(BZ2File)(fname, mode)
+        if ext == '.gz':
+            from gzip import GzipFile
+            return make_closing(GzipFile)(fname, mode)
+        return open(fname, mode)
+
+
+def any2utf8(text, errors='strict', encoding='utf8'):
+    """Convert a string (unicode or bytestring in `encoding`), to bytestring in utf8."""
+    if isinstance(text, unicode):
+        return text.encode('utf8')
+    # do bytestring -> unicode -> utf8 full circle, to ensure valid utf8
+    return unicode(text, encoding, errors=errors).encode('utf8')
+to_utf8 = any2utf8
 
 
 class SaveLoad(object):
@@ -304,3 +344,12 @@ def unpickle(fname):
     """Load pickled object from `fname`"""
     with open(fname) as f:
         return _pickle.loads(f.read())
+
+
+def qsize(queue):
+    """Return the (approximate) queue size where available; -1 where not (OS X)."""
+    try:
+        return queue.qsize()
+    except NotImplementedError:
+        # OS X doesn't support qsize
+        return -1
