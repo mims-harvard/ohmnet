@@ -8,6 +8,7 @@
 from __future__ import with_statement
 
 import logging
+import itertools
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,14 @@ def any2utf8(text, errors='strict', encoding='utf8'):
     # do bytestring -> unicode -> utf8 full circle, to ensure valid utf8
     return unicode(text, encoding, errors=errors).encode('utf8')
 to_utf8 = any2utf8
+
+
+def any2unicode(text, encoding='utf8', errors='strict'):
+    """Convert a string (bytestring in `encoding` or unicode), to unicode."""
+    if isinstance(text, unicode):
+        return text
+    return unicode(text, encoding, errors=errors)
+to_unicode = any2unicode
 
 
 class SaveLoad(object):
@@ -346,6 +355,24 @@ def unpickle(fname):
         return _pickle.loads(f.read())
 
 
+def prune_vocab(vocab, min_reduce, trim_rule=None):
+    """
+    Remove all entries from the `vocab` dictionary with count smaller than `min_reduce`.
+
+    Modifies `vocab` in place, returns the sum of all counts that were pruned.
+
+    """
+    result = 0
+    old_len = len(vocab)
+    for w in list(vocab):  # make a copy of dict's keys
+        if not keep_vocab_item(w, vocab[w], min_reduce, trim_rule):  # vocab[w] <= min_reduce:
+            result += vocab[w]
+            del vocab[w]
+    logger.info("pruned out %i tokens with count <=%i (before %i, after %i)",
+                old_len - len(vocab), min_reduce, old_len, len(vocab))
+    return result
+
+
 def qsize(queue):
     """Return the (approximate) queue size where available; -1 where not (OS X)."""
     try:
@@ -353,3 +380,68 @@ def qsize(queue):
     except NotImplementedError:
         # OS X doesn't support qsize
         return -1
+
+
+RULE_DEFAULT = 0
+RULE_DISCARD = 1
+RULE_KEEP = 2
+
+
+def keep_vocab_item(word, count, min_count, trim_rule=None):
+    default_res = count >= min_count
+
+    if trim_rule is None:
+        return default_res
+    else:
+        rule_res = trim_rule(word, count, min_count)
+        if rule_res == RULE_KEEP:
+            return True
+        elif rule_res == RULE_DISCARD:
+            return False
+        else:
+            return default_res
+
+
+def chunkize_serial(iterable, chunksize, as_numpy=False):
+    """
+    Return elements from the iterable in `chunksize`-ed lists. The last returned
+    element may be smaller (if length of collection is not divisible by `chunksize`).
+
+    >>> print(list(grouper(range(10), 3)))
+    [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
+
+    """
+    import numpy
+    it = iter(iterable)
+    while True:
+        if as_numpy:
+            # convert each document to a 2d numpy array (~6x faster when transmitting
+            # chunk data over the wire, in Pyro)
+            wrapped_chunk = [[numpy.array(doc) for doc in itertools.islice(it, int(chunksize))]]
+        else:
+            wrapped_chunk = [list(itertools.islice(it, int(chunksize)))]
+        if not wrapped_chunk[0]:
+            break
+        # memory opt: wrap the chunk and then pop(), to avoid leaving behind a dangling reference
+        yield wrapped_chunk.pop()
+
+grouper = chunkize_serial
+
+
+class RepeatCorpusNTimes(SaveLoad):
+
+    def __init__(self, corpus, n):
+        """
+        Repeat a `corpus` `n` times.
+
+        >>> corpus = [[(1, 0.5)], []]
+        >>> list(RepeatCorpusNTimes(corpus, 3)) # repeat 3 times
+        [[(1, 0.5)], [], [(1, 0.5)], [], [(1, 0.5)], []]
+        """
+        self.corpus = corpus
+        self.n = n
+
+    def __iter__(self):
+        for _ in xrange(self.n):
+            for document in self.corpus:
+                yield document

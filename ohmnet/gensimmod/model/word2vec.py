@@ -21,8 +21,8 @@ try:
 except ImportError:
     from Queue import Queue, Empty
 
-from numpy import exp, log, dot, zeros, outer, random, dtype, float32 as REAL,\
-    double, uint32, array, uint8, fromstring, sqrt, newaxis,\
+from numpy import exp, log, dot, zeros, outer, random, dtype, float32 as REAL, \
+    double, uint32, array, uint8, fromstring, sqrt, newaxis, \
     ndarray, empty, sum as np_sum, prod, ones, ascontiguousarray, vstack
 
 from .. import utils, matutils  # utility fnc for pickling, common scipy operations etc
@@ -38,12 +38,14 @@ try:
     from word2vec_inner import train_batch_sg, train_batch_cbow
     from word2vec_inner import score_sentence_sg, score_sentence_cbow
     from word2vec_inner import FAST_VERSION, MAX_WORDS_IN_BATCH
+
     logger.debug('Fast version of {0} is being used'.format(__name__))
 except ImportError:
     # failed... fall back to plain numpy (20-80x slower training than the above)
     logger.warning('Slow version of {0} is being used'.format(__name__))
     FAST_VERSION = -1
     MAX_WORDS_IN_BATCH = 10000
+
 
     def train_batch_sg(model, sentences, alpha, work=None):
         """
@@ -62,7 +64,7 @@ except ImportError:
                 print 'Processing: %d/%d' % (i, len(sentences))
 
             word_vocabs = [model.vocab[w] for w in sentence if w in model.vocab and
-                           model.vocab[w].sample_int > model.random.rand() * 2**32]
+                           model.vocab[w].sample_int > model.random.rand() * 2 ** 32]
             for pos, word in enumerate(word_vocabs):
                 reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
 
@@ -74,6 +76,7 @@ except ImportError:
                         train_sg_pair(model, model.index2word[word.index], word2.index, alpha)
             result += len(word_vocabs)
         return result
+
 
     def train_batch_cbow(model, sentences, alpha, work=None, neu1=None):
         """
@@ -89,7 +92,7 @@ except ImportError:
         result = 0
         for sentence in sentences:
             word_vocabs = [model.vocab[w] for w in sentence if w in model.vocab and
-                           model.vocab[w].sample_int > model.random.rand() * 2**32]
+                           model.vocab[w].sample_int > model.random.rand() * 2 ** 32]
             for pos, word in enumerate(word_vocabs):
                 reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
                 start = max(0, pos - model.window + reduced_window)
@@ -101,6 +104,7 @@ except ImportError:
                 train_cbow_pair(model, word, word2_indices, l1, alpha)
             result += len(word_vocabs)
         return result
+
 
     def score_sentence_sg(model, sentence, work=None):
         """
@@ -125,12 +129,13 @@ except ImportError:
 
             # now go over all words from the window, predicting each one in turn
             start = max(0, pos - model.window)
-            for pos2, word2 in enumerate(word_vocabs[start : pos + model.window + 1], start):
+            for pos2, word2 in enumerate(word_vocabs[start: pos + model.window + 1], start):
                 # don't train on OOV words and on the `word` itself
                 if word2 is not None and pos2 != pos:
                     log_prob_sentence += score_sg_pair(model, word, word2)
 
         return log_prob_sentence
+
 
     def score_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
         """
@@ -166,9 +171,11 @@ except ImportError:
 # If pyemd is attempted to be used, but isn't installed, ImportError will be raised.
 try:
     from pyemd import emd
+
     PYEMD_EXT = True
 except ImportError:
     PYEMD_EXT = False
+
 
 def train_sg_pair(model, word, context_index, alpha, learn_vectors=True,
                   learn_hidden=True, context_vectors=None, parent_vectors=None,
@@ -221,6 +228,7 @@ def train_sg_pair(model, word, context_index, alpha, learn_vectors=True,
         l1 += neu1e * lock_factor  # learn input -> hidden (mutates model.syn0[word2.index], if that is l1)
     return neu1e
 
+
 def sigmoid(p):
     if p > 0:
         return 1. / (1. + exp(-p))
@@ -228,7 +236,8 @@ def sigmoid(p):
         return exp(p) / (1 + exp(p))
     else:
         raise ValueError
-        
+
+
 def train_cbow_pair(model, word, input_word_indices, l1, alpha, learn_vectors=True, learn_hidden=True):
     neu1e = zeros(l1.shape)
 
@@ -267,15 +276,15 @@ def train_cbow_pair(model, word, input_word_indices, l1, alpha, learn_vectors=Tr
 def score_sg_pair(model, word, word2):
     l1 = model.syn0[word2.index]
     l2a = deepcopy(model.syn1[word.point])  # 2d matrix, codelen x layer1_size
-    sgn = (-1.0)**word.code  # ch function, 0-> 1, 1 -> -1
-    lprob = -log(1.0 + exp(-sgn*dot(l1, l2a.T)))
+    sgn = (-1.0) ** word.code  # ch function, 0-> 1, 1 -> -1
+    lprob = -log(1.0 + exp(-sgn * dot(l1, l2a.T)))
     return sum(lprob)
 
 
 def score_cbow_pair(model, word, word2_indices, l1):
     l2a = model.syn1[word.point]  # 2d matrix, codelen x layer1_size
-    sgn = (-1.0)**word.code  # ch function, 0-> 1, 1 -> -1
-    lprob = -log(1.0 + exp(-sgn*dot(l1, l2a.T)))
+    sgn = (-1.0) ** word.code  # ch function, 0-> 1, 1 -> -1
+    lprob = -log(1.0 + exp(-sgn * dot(l1, l2a.T)))
     return sum(lprob)
 
 
@@ -285,6 +294,7 @@ class Vocab(object):
     and for constructing binary trees (incl. both word leaves and inner nodes).
 
     """
+
     def __init__(self, **kwargs):
         self.count = 0
         self.__dict__.update(kwargs)
@@ -305,6 +315,7 @@ class Word2Vec(utils.SaveLoad):
     compatible with the original word2vec implementation via `save_word2vec_format()` and `load_word2vec_format()`.
 
     """
+
     def __init__(
             self, sentences=None, size=100, alpha=0.025, window=5, min_count=5,
             max_vocab_size=None, sample=1e-3, seed=1, workers=3, min_alpha=0.0001,
@@ -316,8 +327,6 @@ class Word2Vec(utils.SaveLoad):
 
         The `sentences` iterable can be simply a list, but for larger corpora,
         consider an iterable that streams the sentences directly from disk/network.
-        See :class:`BrownCorpus`, :class:`Text8Corpus` or :class:`LineSentence` in
-        this module for such examples.
 
         If you don't supply `sentences`, the model is left uninitialized -- use if
         you plan to initialize it in some other way.
@@ -415,7 +424,7 @@ class Word2Vec(utils.SaveLoad):
             self.build_vocab(sentences, trim_rule=trim_rule)
             self.train(sentences)
 
-    def make_cum_table(self, power=0.75, domain=2**31 - 1):
+    def make_cum_table(self, power=0.75, domain=2 ** 31 - 1):
         """
         Create a cumulative-distribution table using stored vocabulary word counts for
         drawing random words in the negative-sampling training routines.
@@ -430,10 +439,10 @@ class Word2Vec(utils.SaveLoad):
         vocab_size = len(self.index2word)
         self.cum_table = zeros(vocab_size, dtype=uint32)
         # compute sum of all power (Z in paper)
-        train_words_pow = float(sum([self.vocab[word].count**power for word in self.vocab]))
+        train_words_pow = float(sum([self.vocab[word].count ** power for word in self.vocab]))
         cumulative = 0.0
         for word_index in range(vocab_size):
-            cumulative += self.vocab[self.index2word[word_index]].count**power
+            cumulative += self.vocab[self.index2word[word_index]].count ** power
             self.cum_table[word_index] = round(cumulative / train_words_pow * domain)
         if len(self.cum_table) > 0:
             assert self.cum_table[-1] == domain
@@ -477,7 +486,8 @@ class Word2Vec(utils.SaveLoad):
 
         """
         self.scan_vocab(sentences, progress_per=progress_per, trim_rule=trim_rule, update=update)  # initial survey
-        self.scale_vocab(keep_raw_vocab=keep_raw_vocab, trim_rule=trim_rule, update=update)  # trim by min_count & precalculate downsampling
+        self.scale_vocab(keep_raw_vocab=keep_raw_vocab, trim_rule=trim_rule,
+                         update=update)  # trim by min_count & precalculate downsampling
         self.finalize_vocab(update=update)  # build tables & arrays
 
     def scan_vocab(self, sentences, progress_per=10000, trim_rule=None, update=False):
@@ -510,7 +520,8 @@ class Word2Vec(utils.SaveLoad):
         self.corpus_count = sentence_no + 1
         self.raw_vocab = vocab
 
-    def scale_vocab(self, min_count=None, sample=None, dry_run=False, keep_raw_vocab=False, trim_rule=None, update=False):
+    def scale_vocab(self, min_count=None, sample=None, dry_run=False, keep_raw_vocab=False, trim_rule=None,
+                    update=False):
         """
         Apply vocabulary settings for `min_count` (discarding less-frequent words)
         and `sample` (controlling the downsampling of more-frequent words).
@@ -609,7 +620,7 @@ class Word2Vec(utils.SaveLoad):
                 word_probability = 1.0
                 downsample_total += v
             if not dry_run:
-                self.vocab[w].sample_int = int(round(word_probability * 2**32))
+                self.vocab[w].sample_int = int(round(word_probability * 2 ** 32))
 
         if not dry_run and not keep_raw_vocab:
             logger.info("deleting the raw counts dictionary of %i items", len(self.raw_vocab))
@@ -724,9 +735,11 @@ class Word2Vec(utils.SaveLoad):
         if total_words is None and total_examples is None:
             if self.corpus_count:
                 total_examples = self.corpus_count
-                logger.info("expecting %i sentences, matching count from corpus used for vocabulary survey", total_examples)
+                logger.info("expecting %i sentences, matching count from corpus used for vocabulary survey",
+                            total_examples)
             else:
-                raise ValueError("you must provide either total_words or total_examples, to enable alpha and progress calculations")
+                raise ValueError(
+                    "you must provide either total_words or total_examples, to enable alpha and progress calculations")
 
         job_tally = 0
 
@@ -1008,7 +1021,7 @@ class Word2Vec(utils.SaveLoad):
         # randomize the remaining words
         for i in xrange(len(self.syn0), len(self.vocab)):
             # construct deterministic seed from word AND seed argument
-            newsyn0[i-len(self.syn0)] = self.seeded_vector(self.index2word[i] + str(self.seed))
+            newsyn0[i - len(self.syn0)] = self.seeded_vector(self.index2word[i] + str(self.seed))
         self.syn0 = vstack([self.syn0, newsyn0])
 
         if self.hs:
@@ -1377,7 +1390,7 @@ class Word2Vec(utils.SaveLoad):
                 if not t1 in docset1 or not t2 in docset2:
                     continue
                 # Compute Euclidean distance between word vectors.
-                distance_matrix[i, j] = sqrt(np_sum((self[t1] - self[t2])**2))
+                distance_matrix[i, j] = sqrt(np_sum((self[t1] - self[t2]) ** 2))
 
         if np_sum(distance_matrix) == 0.0:
             # `emd` gets stuck if the distance matrix contains only zeros.
@@ -1580,13 +1593,12 @@ class Word2Vec(utils.SaveLoad):
           True
 
         """
-        if not(len(ws1) and len(ws2)):
+        if not (len(ws1) and len(ws2)):
             raise ZeroDivisionError('Atleast one of the passed list is empty.')
         v1 = [self[word] for word in ws1]
         v2 = [self[word] for word in ws2]
         return dot(matutils.unitvec(array(v1).mean(axis=0)),
                    matutils.unitvec(array(v2).mean(axis=0)))
-        
 
     def init_sims(self, replace=False):
         """
@@ -1715,7 +1727,8 @@ class Word2Vec(utils.SaveLoad):
         return sections
 
     def __str__(self):
-        return "%s(vocab=%s, size=%s, alpha=%s)" % (self.__class__.__name__, len(self.index2word), self.vector_size, self.alpha)
+        return "%s(vocab=%s, size=%s, alpha=%s)" % (
+        self.__class__.__name__, len(self.index2word), self.vector_size, self.alpha)
 
     def save(self, *args, **kwargs):
         # don't bother storing the cached normalized vectors, recalculable table
@@ -1738,7 +1751,7 @@ class Word2Vec(utils.SaveLoad):
             if hasattr(v, 'sample_int'):
                 break  # already 0.12.0+ style int probabilities
             elif hasattr(v, 'sample_probability'):
-                v.sample_int = int(round(v.sample_probability * 2**32))
+                v.sample_int = int(round(v.sample_probability * 2 ** 32))
                 del v.sample_probability
         if not hasattr(model, 'syn0_lockf') and hasattr(model, 'syn0'):
             model.syn0_lockf = ones(len(model.syn0), dtype=REAL)
@@ -1748,103 +1761,6 @@ class Word2Vec(utils.SaveLoad):
             model.train_count = 0
             model.total_train_time = 0
         return model
-
-
-class BrownCorpus(object):
-    """Iterate over sentences from the Brown corpus (part of NLTK data)."""
-    def __init__(self, dirname):
-        self.dirname = dirname
-
-    def __iter__(self):
-        for fname in os.listdir(self.dirname):
-            fname = os.path.join(self.dirname, fname)
-            if not os.path.isfile(fname):
-                continue
-            for line in utils.smart_open(fname):
-                line = utils.to_unicode(line)
-                # each file line is a single sentence in the Brown corpus
-                # each token is WORD/POS_TAG
-                token_tags = [t.split('/') for t in line.split() if len(t.split('/')) == 2]
-                # ignore words with non-alphabetic tags like ",", "!" etc (punctuation, weird stuff)
-                words = ["%s/%s" % (token.lower(), tag[:2]) for token, tag in token_tags if tag[:2].isalpha()]
-                if not words:  # don't bother sending out empty sentences
-                    continue
-                yield words
-
-
-class Text8Corpus(object):
-    """Iterate over sentences from the "text8" corpus, unzipped from http://mattmahoney.net/dc/text8.zip ."""
-    def __init__(self, fname, max_sentence_length=MAX_WORDS_IN_BATCH):
-        self.fname = fname
-        self.max_sentence_length = max_sentence_length
-
-    def __iter__(self):
-        # the entire corpus is one gigantic line -- there are no sentence marks at all
-        # so just split the sequence of tokens arbitrarily: 1 sentence = 1000 tokens
-        sentence, rest = [], b''
-        with utils.smart_open(self.fname) as fin:
-            while True:
-                text = rest + fin.read(8192)  # avoid loading the entire file (=1 line) into RAM
-                if text == rest:  # EOF
-                    words = utils.to_unicode(text).split()
-                    sentence.extend(words)  # return the last chunk of words, too (may be shorter/longer)
-                    if sentence:
-                        yield sentence
-                    break
-                last_token = text.rfind(b' ')  # last token may have been split in two... keep for next iteration
-                words, rest = (utils.to_unicode(text[:last_token]).split(),
-                               text[last_token:].strip()) if last_token >= 0 else ([], text)
-                sentence.extend(words)
-                while len(sentence) >= self.max_sentence_length:
-                    yield sentence[:self.max_sentence_length]
-                    sentence = sentence[self.max_sentence_length:]
-
-
-class LineSentence(object):
-    """
-    Simple format: one sentence = one line; words already preprocessed and separated by whitespace.
-    """
-
-    def __init__(self, source, max_sentence_length=MAX_WORDS_IN_BATCH, limit=None):
-        """
-        `source` can be either a string or a file object. Clip the file to the first
-        `limit` lines (or no clipped if limit is None, the default).
-
-        Example::
-
-            sentences = LineSentence('myfile.txt')
-
-        Or for compressed files::
-
-            sentences = LineSentence('compressed_text.txt.bz2')
-            sentences = LineSentence('compressed_text.txt.gz')
-
-        """
-        self.source = source
-        self.max_sentence_length = max_sentence_length
-        self.limit = limit
-
-    def __iter__(self):
-        """Iterate through the lines in the source."""
-        try:
-            # Assume it is a file-like object and try treating it as such
-            # Things that don't have seek will trigger an exception
-            self.source.seek(0)
-            for line in itertools.islice(self.source, self.limit):
-                line = utils.to_unicode(line).split()
-                i = 0
-                while i < len(line):
-                    yield line[i : i + self.max_sentence_length]
-                    i += self.max_sentence_length
-        except AttributeError:
-            # If it didn't work like a file, use it as a string filename
-            with utils.smart_open(self.source) as fin:
-                for line in itertools.islice(fin, self.limit):
-                    line = utils.to_unicode(line).split()
-                    i = 0
-                    while i < len(line):
-                        yield line[i : i + self.max_sentence_length]
-                        i += self.max_sentence_length
 
 
 RULE_DISCARD = 1
